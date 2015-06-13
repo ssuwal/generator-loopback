@@ -16,10 +16,6 @@ var pkg = require('../package.json');
 module.exports = yeoman.generators.Base.extend({
   constructor: function() {
     yeoman.generators.Base.apply(this, arguments);
-    // Skip file conflict detection
-    if (this.conflicter) {
-      this.conflicter.force = true;
-    }
 
     this.argument('name', {
       desc: 'Name of the application to scaffold.',

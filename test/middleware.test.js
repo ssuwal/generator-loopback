@@ -35,11 +35,31 @@ describe('loopback:middleware generator', function() {
     });
   });
 
+  it('adds a new phase next to a selected one', function(done) {
+    var modelGen = givenMiddlewareGenerator();
+    helpers.mockPrompt(modelGen, {
+      name: 'my-middleware-2',
+      phase: '(custom phase)',
+      customPhase: 'my-phase-2',
+      nextPhase: 'routes',
+      paths: ['/x', '/y'],
+      params: '{"z": 1}'
+    });
+
+    modelGen.run(function() {
+      var newSources = Object.keys(readMiddlewaresJsonSync('server'));
+      var p1 = newSources.indexOf('my-phase-2');
+      var p2 = newSources.indexOf('routes');
+      expect(p1).to.equal(p2 - 1);
+      done();
+    });
+  });
+
   it('adds a new entry to an existing phase in server/middleware.json',
     function(done) {
       var modelGen = givenMiddlewareGenerator();
       helpers.mockPrompt(modelGen, {
-        name: 'my-middleware-2',
+        name: 'my-middleware-3',
         phase: 'routes',
         paths: ['/x', '/y'],
         params: '{"z": 1}'
@@ -49,7 +69,29 @@ describe('loopback:middleware generator', function() {
         readMiddlewaresJsonSync('server').routes);
       modelGen.run(function() {
         var newSources = Object.keys(readMiddlewaresJsonSync('server').routes);
-        var expectedSources = builtinSources.concat(['my-middleware-2']);
+        var expectedSources = builtinSources.concat(['my-middleware-3']);
+        expect(newSources).to.have.members(expectedSources);
+        done();
+      });
+    });
+
+  it('supports sub-phase',
+    function(done) {
+      var modelGen = givenMiddlewareGenerator();
+      helpers.mockPrompt(modelGen, {
+        name: 'my-middleware-4',
+        phase: 'routes',
+        subPhase: 'after',
+        paths: ['/x', '/y'],
+        params: '{"z": 1}'
+      });
+
+      var builtinSources = Object.keys(
+        readMiddlewaresJsonSync('server').routes);
+      modelGen.run(function() {
+        var newSources = Object.keys(
+          readMiddlewaresJsonSync('server')['routes:after']);
+        var expectedSources = builtinSources.concat(['my-middleware-4']);
         expect(newSources).to.have.members(expectedSources);
         done();
       });

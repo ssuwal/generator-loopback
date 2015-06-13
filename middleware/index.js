@@ -7,7 +7,6 @@ var wsModels = require('loopback-workspace').models;
 var actions = require('../lib/actions');
 var helpers = require('../lib/helpers');
 var validateName = helpers.validateName;
-var async = require('async');
 
 function toNumberedList(items) {
   var lastIndex = items.length - 1;
@@ -114,13 +113,25 @@ module.exports = yeoman.generators.Base.extend({
         when: function(answers) {
           return answers.phase === OTHER_PHASE;
         }
-      }
+      },
+      {
+        name: 'subPhase',
+        message: 'Select the sub phase for ' + displayName + ':',
+        type: 'list',
+        default: '',
+        choices: [
+          {name: '1. before', value: 'before'},
+          {name: '2. regular', value: ''},
+          {name: '3. after', value: 'after'}
+        ]
+      },
     ];
 
     this.prompt(prompts, function(props) {
       this.phase = props.customPhase || props.phase;
       this.customPhase = props.customPhase;
       this.nextPhase = props.nextPhase;
+      this.subPhase = props.subPhase;
       done();
     }.bind(this));
   },
@@ -194,34 +205,31 @@ module.exports = yeoman.generators.Base.extend({
     var config = {
       name: this.name,
       phase: this.phase,
+      subPhase: this.subPhase,
       paths: this.paths,
       params: this.params || {},
       facetName: 'server' // hard-coded for now
     };
 
     var self = this;
-    async.series([
-      function addPhase(done) {
-        if (self.customPhase && self.nextPhase) {
-          if (self.nextPhase === LAST_PHASE) {
-            self.nextPhase = null;
-          }
-          wsModels.Middleware.addPhase(
-            'server', self.phase, self.nextPhase, done);
-        } else {
-          process.nextTick(done);
-        }
-      },
-      function addMiddleware(done) {
-        wsModels.Middleware.create(config, function(err, inst) {
-          helpers.reportValidationError(err, self.log);
-          if (!err && inst) {
-            self.log(
-              'Middleware %s is added to phase %s.', inst.name, inst.phase);
-          }
-          return done(err);
-        });
-      }], done);
+
+    if (self.customPhase && self.nextPhase) {
+      if (self.nextPhase === LAST_PHASE) {
+        self.nextPhase = null;
+        config.nextPhase = self.nextPhase;
+      } else {
+        config.nextPhase = self.nextPhase;
+      }
+    }
+
+    wsModels.Middleware.addMiddleware(config, function(err, inst) {
+      helpers.reportValidationError(err, self.log);
+      if (!err && inst) {
+        self.log(
+          'Middleware %s is added to phase %s.', inst.name, inst.phase);
+      }
+      return done(err);
+    });
   },
 
   saveProject: actions.saveProject
